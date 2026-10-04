@@ -1,0 +1,23 @@
+#!/bin/sh
+# A single-window manager sizes the browser to the guest display.
+matchbox-window-manager -use_titlebar no &
+manager=$!
+export GDK_BACKEND=x11
+printf '\nPOLYLAB_BOOT:browser\n' >/dev/ttyS0
+netsurf-gtk2 "$1" &
+browser=$!
+(
+  # The application title appears only after NetSurf has loaded the document.
+  for attempt in $(seq 1 150); do
+    if xwininfo -root -tree 2>/dev/null | grep -F -- "$WEB_READY_TITLE" >/dev/null; then
+      printf '\nPOLYLAB_BOOT:ready\n' >/dev/ttyS0
+      exit 0
+    fi
+    kill -0 "$browser" 2>/dev/null || break
+    sleep 2
+  done
+  printf '\nPOLYLAB_BOOT:failed\n' >/dev/ttyS0
+) &
+monitor=$!
+trap 'kill "$manager" "$monitor" 2>/dev/null' EXIT
+wait "$browser"

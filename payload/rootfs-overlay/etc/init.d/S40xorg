@@ -1,0 +1,3 @@
+#!/bin/sh
+# The browser session and X server are managed together by S80web-client.
+exit 0

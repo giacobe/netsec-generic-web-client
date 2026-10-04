@@ -1,0 +1,25 @@
+#!/bin/sh
+. /etc/web-client.conf
+case "$1" in
+  start)
+    ip link set eth0 up
+    ip addr replace "$CLIENT_ADDRESS" dev eth0
+    (
+      # Wait for the application, so the first page does not show a connection error.
+      curl -fsS --connect-timeout 2 --max-time 3 --retry 120 --retry-connrefused \
+        --retry-delay 1 --retry-max-time 120 -o /dev/null "$WEB_URL" || {
+          printf '\nPOLYLAB_BOOT:failed\n' >/dev/ttyS0
+          exit 1
+        }
+      printf '\nPOLYLAB_BOOT:desktop\n' >/dev/ttyS0
+      HOME=/root
+      WEB_READY_TITLE=${WEB_READY_TITLE:-Web Lab}
+      export HOME WEB_READY_TITLE
+      xinit /usr/bin/web-client-session "$WEB_URL" -- :0 vt1 -nolisten tcp -s 0 -dpms
+      printf '\nPOLYLAB_BOOT:failed\n' >/dev/ttyS0
+    ) >>/tmp/web-client.log 2>&1 &
+    echo $! >/tmp/web-client.pid
+    ;;
+  stop) test ! -f /tmp/web-client.pid || kill "$(cat /tmp/web-client.pid)" ;;
+  restart) "$0" stop; "$0" start ;;
+esac

@@ -1,0 +1,4 @@
+#!/bin/sh
+export HOME=/root USER=root LOGNAME=root
+cd /root
+exec /bin/sh -l
